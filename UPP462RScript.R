@@ -56,12 +56,6 @@ head(cps_schools)
 # what we will need to map the points. Take a look at the points plotted out by using the plot() function.
 plot(cps_schools$X,cps_schools$Y)
 
-# For the rest of this exercise we will be using data in an sf object to take advantage of the sf functionality
-
-cps_schools_sf <- st_as_sf(cps_schools, coords = c("X", "Y"), crs = 3435)
-
-plot(cps_schools_sf$geometry)
-
 # Retrieving Chicago Census tracts 
 # Load census tracts for Chicago
 chi_tracts <- tracts(state = "IL", county = "Cook", cb = TRUE)
@@ -107,18 +101,22 @@ ggplot() +
   geom_sf(data = cps_schools_sf, color = "red") +  # Overlay points, colored red
   theme_minimal()
 
-# Perform the spatial join
-# chi_tract_schools <- st_join(cps_schools, chi_tracts_chicago)
+#________Spatial Join_________________________________________________________________
 
-# view(chi_tract_schools)
+# The purpose of this analysis is to identify census tracts with higher numbers of CPS schools and
+# visualize them. To accomplish this we want to associate the census tracts with any point 
+# representing CPS schools that intersect with them.In ArcGIS pro, this would be done with a spatial join.
+# We can perform the same operation in R.
 
-#_________________________________________________________________________
-
-# Perform the spatial join to associate each school point with its tract
+# To start off, we want to use st_join() to associate each school point with the tract that intersects it. 
+# Below, we are creating a new dataframe that. A left join is when all features from the 
+# first argument are retained, even if they do not have a spatial relationship with the features 
+# in the second argument.Save this operation to a new datafram called "schools_in_tracts"
 
 schools_in_tracts <- st_join(cps_schools, chi_tracts_chicago, left = TRUE)
 
 # Count the number of schools per tract
+# Add detailed description
 
 school_counts <- schools_in_tracts %>%
   group_by(GEOID) %>%            # Use GEOID directly from schools_in_tracts
@@ -127,6 +125,7 @@ school_counts <- schools_in_tracts %>%
 view(school_counts)
 
 # Join the counts back to the original chi_tracts_chicago layer
+# Add detailed description
 
 
 chi_tracts_with_counts <- chi_tracts_chicago %>%
