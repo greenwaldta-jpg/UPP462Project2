@@ -74,31 +74,35 @@ view(chi_tracts_chicago)
 
 ## --Let's plot the two layers so that they are projected properly-----------
 
-# The Coordinate Reference System (CRS) contains the projection and datum of our tract file,
-# allowing us to match that CRS in our cps_schools point layer. The output of st_crs() will include:
-# The EPSG code (if available), which is a numeric identifier for the CRS (e.g., EPSG:4326 for WGS84).
-# The PROJ string or WKT (Well-Known Text) representation, which contains detailed information about the projection and datum.
+# We need to start by making sure that our data is ready to be read. the sf package is where 
+# we derive many of the functions for geospatial analysis. Because of this, we have to make sure 
+# any features we are using for our mapping is an sf object. Run the code in the next line containing 
+# the "st_as_sf" function to change the cps_schools layer to an sf object.
+cps_schools <- st_as_sf(cps_schools, coords = c("X", "Y"), crs = 4326)
+
+# You may have noticed the "crs =" at the ned of the last line. CRS, or Coordinate Reference System, 
+# contains the projection and datum of a layer to map. When we map multiple layers, they need the same CRS.
+# The output of st_crs() in the below code will include: The EPSG code (if available), which is a numeric 
+# identifier for the CRS (e.g., EPSG:4326 for WGS84), as well as the datum, among other information.
 
 st_crs(chi_tracts_chicago)
 
 # The DATUM is NAD 1983 and the ESPG is 4269, which is also a reference to NAD 1983.
 # However, we want to add a projected coordinate system, this means we will need to 
-# transform our data so that they have a new CRS that aligns with what we are used to.
-# The next line of code changes the CRS of each layer to the specified EPSG code (3435 for 
-# Illinois State Plane East).
+# transform our data so that there is a new CRS that is appropriate for Chicago.
+# The next line of code changes the CRS of each layer to the specified EPSG code Enter 
+# "3435" after "crs =" to add the projection Illinois State Plane East to the two layers).
 
 cps_schools <- st_transform(cps_schools, crs = 3435)
 chi_tracts_chicago <- st_transform(chi_tracts_chicago, crs = 3435)
 
-# Let's look at our data so far. In ggplot2, geom_sf() is designed to work specifically 
-# with sf (simple feature) objects, which are a standardized format for spatial data in R. 
-# Converting your points layer to an sf object is essential because geom_sf() expects this 
-# format to interpret spatial coordinates properly and align the layers with spatial accuracy.
+# Let's look at our data so far. 
 
-# Create the ggplot
+# In the code below, ggplot is used from the ggplot2 package. Geom_sf is used specifically 
+# for visualizing spatial data by looking to the layers' "geometry" field.
 ggplot() + 
   geom_sf(data = chi_tracts_chicago) +            # Plot the census shapefile
-  geom_sf(data = cps_schools_sf, color = "red") +  # Overlay points, colored red
+  geom_sf(data = cps_schools, color = "red") +  # Overlay points, colored red
   theme_minimal()
 
 #________Spatial Join_________________________________________________________________
@@ -116,33 +120,43 @@ ggplot() +
 schools_in_tracts <- st_join(cps_schools, chi_tracts_chicago, left = TRUE)
 
 # Count the number of schools per tract
-# Add detailed description
+# This following code groups our new dataframe, schools_in_tracts, by the GEOID column, which uniquely 
+# identifies each census tract. The code summarise(school_count = n()) then counts the number of schools 
+# within each tract and stores this count in a new column called school_count. The resulting school_counts object 
+# is a data frame with two columns: GEOID and school_count, representing the number of schools in each tract.
 
 school_counts <- schools_in_tracts %>%
   group_by(GEOID) %>%            # Use GEOID directly from schools_in_tracts
   summarise(school_count = n())   # Count points in each tract
 
+# Run the below code 
 view(school_counts)
+# What is the range of the number of schools that you see?
 
-# Join the counts back to the original chi_tracts_chicago layer
-# Add detailed description
-
+# Next, the goal is to append the school_count information back to the original
+# chi_tracts_chicago layer, so each tract polygon now has a count of schools. Sf 
+# objects can only have one active geometry field at a time, so
+# st_drop_geometry(school_counts) removes the geometry from school_counts, leaving 
+# only the attribute data (GEOID and school_count) to prevent conflicts when joining.
+# left_join() then merges this attribute data back into chi_tracts_chicago by matching 
+# rows based on the GEOID column. The result, chi_tracts_with_counts, reflects the 
+# original tract layer  with the school_count field added.
 
 chi_tracts_with_counts <- chi_tracts_chicago %>%
-  left_join(st_drop_geometry(school_counts), by = "GEOID")   # Drop geometry in school_counts to avoid conflicts
+  left_join(st_drop_geometry(school_counts), by = "GEOID")  
 
+# Take a look at the new dataframe with the school count field added.
 view(chi_tracts_with_counts)
 
-#___________________________________________________________________________
+#____Create Map for Count of Schools by Tract______________________________________________________________
 
-ggplot(data = chi_tracts_with_counts) +
-  geom_sf(aes(fill = school_count)) +        # Use school_count for fill color
-  scale_fill_viridis_c(option = "plasma",    # Color scale for better visualization
-                       na.value = "grey90",  # Color for tracts with no schools
-                       name = "School Count") +
-  labs(title = "Number of Schools per Tract in Chicago",
-       caption = "Data Source: CPS and Tracts") +
-  theme_minimal()             
+# Now that we have a field for schools counts by tract, we can turn it into a choropleth 
+# map to demonstrate which tracts have the most schools. To do this, we will go back to ggplot.
+# There are a couple more features that we will make use of to create a complete map. 
+# the "aes" function dictates appearance, "scale_fill_gradient" specifies that appearance, 
+# and "labs" allows for labeling. In the following code chunk, give the "low" argument a value 
+# of "lightblue", and give the "high" argument a value of "darkblue". This will give our tracts 
+# a gradient of colors based on the school_count value.
 
 ggplot(data = chi_tracts_with_counts) +
   geom_sf(aes(fill = school_count)) +       # Use school_count for fill color
