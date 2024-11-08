@@ -50,27 +50,32 @@ census_api_key("121819beb19ed0d9780bf2ac3fa331fc01b95bfc", install = TRUE)
 cps_schools <- CPS_School_Locations_SY1415_20241101
 
 # Use the head() function to look at the first few rows and get familiar with our data. 
+# Enter "cps_schools" into the head() function.
 head(cps_schools)
 
 # We can see that the X and Y coordinates of each school are in two separate columns. This is 
 # what we will need to map the points. Take a look at the points plotted out by using the plot() function.
 plot(cps_schools$X,cps_schools$Y)
 
-# Retrieving Chicago Census tracts 
-# Load census tracts for Chicago
+# We will now retrieving Chicago Census tracts by specifying the state and county of the tracts we want.
+# Add a dataframe called "chi_tracts" on the left side of the arrow to create a new dataframe 
+# containing Chicago census tracts.
 chi_tracts <- tracts(state = "IL", county = "Cook", cb = TRUE)
 
-# Load Chicago place boundary
+# We now have Cook county census tracts, but we want to pair this down to Chicago. We can use Chicago's 
+# census place boundary for this. Next, let's create a dataframe for the boundary of Chicago. The code chunk 
+# looks to census places in Illinois, filtered for just Chicago. Enter a new dataframe name of "chicago_place" 
+# to the left of the arrow.
 chicago_place <- places(state = "IL", cb = TRUE) %>%
   filter(NAME == "Chicago")
 
-# Use st_intersection to filter tracts within Chicago
+# Now that we have Cook County census tracts and the City of Chicago boundary, use st_intersection to 
+# select tracts within the city of Chicago boundary.In the st_intersection() function, enter "chi_tracts"
+# and "chicago_place" separated by a comma.
 chi_tracts_chicago <- st_intersection(chi_tracts, chicago_place)
 
-# Plot the resulting Chicago census tracts
+# Run the code below to plot the resulting Chicago census tracts
 plot(chi_tracts_chicago$geometry) 
-
-view(chi_tracts_chicago)
 
 ## --Let's plot the two layers so that they are projected properly-----------
 
